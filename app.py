@@ -4,6 +4,9 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.common.exceptions import *
+from selenium.webdriver.support import expected_conditions
 from time import sleep
 import smtplib
 import smtplib
@@ -34,29 +37,40 @@ def iniciar_driver():
 
     driver = webdriver.Chrome(service=Service(chromedriver_path), options=chrome_options)
     
-    return driver
+    wait = WebDriverWait(
+        driver=driver,
+        timeout=0,
+        poll_frequency=1,
+        ignored_exceptions=[
+            NoSuchElementException,
+            ElementNotVisibleException,
+            ElementNotSelectableException
+        ]
+    )
+
+    return driver, wait
 
 def open_url(url):
 
-    driver = iniciar_driver()
+    driver, wait = iniciar_driver()
     driver.get(url)
 
-    return driver
+    return driver, wait
 
-def find_city(driver, city):
+def find_city(wait, city):
 
-    city_name = driver.find_element(By.ID, 'search_pc')
-    city_name.send_keys(city)
-    city_name.send_keys(Keys.ENTER)
+    city_name = wait.until(expected_conditions.visibility_of_all_elements_located((By.ID, 'search_pc')))
+    city_name[0].send_keys(city)
+    city_name[0].send_keys(Keys.ENTER)
     sleep(5)
 
-def get_day_temperature(driver, xpath):
-    day_temperature = driver.find_element(By.XPATH, xpath)
-    return day_temperature
+def get_day_temperature(driver, wait, xpath):
+    day_temperature = wait.until(expected_conditions.visibility_of_all_elements_located((By.XPATH, xpath)))
+    return day_temperature[0]
 
-def get_day_condition(driver, xpath):
-    day_condition = driver.find_element(By.XPATH, xpath)
-    return day_condition
+def get_day_condition(driver, wait, xpath):
+    day_condition = wait.until(expected_conditions.visibility_of_all_elements_located((By.XPATH, xpath)))
+    return day_condition[0]
 
 def get_3_day_prediction(driver, day_xpath, max_xpath, min_xpath):
 
@@ -106,6 +120,13 @@ def send_email(smtp_server, smtp_port, smtp_user, smtp_password, from_email, to_
     finally:
         server.quit()
 
+def schedule_email(duration):
+    schedule.every(duration).seconds.do(main)
+
+    while True:
+        schedule.run_pending()
+        sleep(1)
+
 def main():
     
     url = 'https://www.tempo.com/'
@@ -124,10 +145,10 @@ def main():
     to_email = 'lpzamprogno@gmail.com'
     subject = 'Previsão do tempo'
 
-    driver = open_url(url)
-    find_city(driver, city)
-    day_temperature = get_day_temperature(driver, temperature_xpath)
-    day_condition = get_day_condition(driver, condition_xpath)
+    driver, wait = open_url(url)
+    find_city(wait, city)
+    day_temperature = get_day_temperature(driver, wait, temperature_xpath)
+    day_condition = get_day_condition(driver, wait, condition_xpath)
 
     predictions = []
     for day in range(2, 5): # d2, d3, d4
@@ -144,12 +165,5 @@ def main():
 
     driver.close()
 
-def schedule_email(duration):
-    schedule.every(duration).minutes.do(main)
-
-    while True:
-        schedule.run_pending()
-        sleep(1)
-
 if __name__ == '__main__':
-    schedule_email(1)
+    schedule_email(30)
