@@ -1,0 +1,8 @@
+1 - Acessar o site https://www.tempo.com/
+2 - Procurar pela cidade de interesse
+3 - Extrair as informaçoes de temperatura, condição atual do tempo
+4 - Extrair a previsão para os próximos 3 dias
+5 - Organizar os dados
+6 - Formatação para um formato de email com os dados coletados
+7 - Enviar o email para um destinatário
+8 - Agendar a execução para um horario específico diariamente
