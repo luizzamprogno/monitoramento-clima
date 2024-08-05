@@ -1,84 +1,106 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import *
-from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support import expected_conditions as EC
 from time import sleep
-import smtplib
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import schedule
 
 def iniciar_driver():
-    chromedriver_path = "C:\\Meus documentos\\Desafios semanais\\Semana 1\\chromedriver-win64\\chromedriver.exe"
-    chrome_options = Options()
+    try:
+        chrome_options = Options()
 
-    arguments = [
-    '--lang=pt-BR',
-    '--window-size=1200,800',
-    '--incognito',
-    '--disable-infobars'
-    '--force-device-scale-factor=0.8'
-    ]
-
-    for argument in arguments:
-        chrome_options.add_argument(argument)
-
-    chrome_options.add_experimental_option('prefs', {
-        'download.prompt_for_download': False,
-        'profile.default_content_setting_values.notifications': 2,
-        'profile.default_content_setting_values.automatic_downloads': 1,
-    })
-
-    driver = webdriver.Chrome(service=Service(chromedriver_path), options=chrome_options)
-    
-    wait = WebDriverWait(
-        driver=driver,
-        timeout=0,
-        poll_frequency=1,
-        ignored_exceptions=[
-            NoSuchElementException,
-            ElementNotVisibleException,
-            ElementNotSelectableException
+        arguments = [
+        '--lang=pt-BR',
+        '--window-size=1200,800',
+        '--incognito',
+        '--disable-infobars'
+        '--force-device-scale-factor=0.8'
         ]
-    )
 
-    return driver, wait
+        for argument in arguments:
+            chrome_options.add_argument(argument)
+
+        chrome_options.add_experimental_option('prefs', {
+            'download.prompt_for_download': False,
+            'profile.default_content_setting_values.notifications': 2,
+            'profile.default_content_setting_values.automatic_downloads': 1,
+        })
+
+        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+        
+        wait = WebDriverWait(
+            driver=driver,
+            timeout=10,
+            poll_frequency=1,
+            ignored_exceptions=[
+                NoSuchElementException,
+                ElementNotVisibleException,
+                ElementNotSelectableException
+            ]
+        )
+
+        return driver, wait
+
+    except WebDriverException as e:
+        print(f'Erro ao iniciar o driver: {e}')
+        return None, None
 
 def open_url(url):
+    try:
+        driver, wait = iniciar_driver()
+        driver.get(url)
 
-    driver, wait = iniciar_driver()
-    driver.get(url)
-
-    return driver, wait
+        return driver, wait
+    
+    except Exception as e:
+        print(f'Erro ao abrir a URL: {e}')
+        return None, None
 
 def find_city(wait, city):
+    try:
+        city_name = wait.until(EC.visibility_of_all_elements_located((By.ID, 'search_pc')))
+        city_name[0].send_keys(city)
+        city_name[0].send_keys(Keys.ENTER)
+        sleep(5)
 
-    city_name = wait.until(expected_conditions.visibility_of_all_elements_located((By.ID, 'search_pc')))
-    city_name[0].send_keys(city)
-    city_name[0].send_keys(Keys.ENTER)
-    sleep(5)
+    except TimeoutException as e:
+        print(f'Erro ao encontrar a cidade: {e}')
 
 def get_day_temperature(driver, wait, xpath):
-    day_temperature = wait.until(expected_conditions.visibility_of_all_elements_located((By.XPATH, xpath)))
-    return day_temperature[0]
+    try:
+        day_temperature = wait.until(EC.visibility_of_all_elements_located((By.XPATH, xpath)))
+        return day_temperature[0]
+    
+    except TimeoutException as e:
+        print(f'Erro ao obter a temperatura do dia: {e}')
 
 def get_day_condition(driver, wait, xpath):
-    day_condition = wait.until(expected_conditions.visibility_of_all_elements_located((By.XPATH, xpath)))
-    return day_condition[0]
+    try:
+        day_condition = wait.until(EC.visibility_of_all_elements_located((By.XPATH, xpath)))
+        return day_condition[0]
+
+    except TimeoutException as e:
+        print(f'Erro ao ober as condições climáticas do dia: {e}')
 
 def get_3_day_prediction(driver, day_xpath, max_xpath, min_xpath):
+    try:
+        prediction_day = driver.find_element(By.XPATH, day_xpath)
+        prediction_max = driver.find_element(By.XPATH, max_xpath)
+        prediction_min = driver.find_element(By.XPATH, min_xpath)
 
-    prediction_day = driver.find_element(By.XPATH, day_xpath)
-    prediction_max = driver.find_element(By.XPATH, max_xpath)
-    prediction_min = driver.find_element(By.XPATH, min_xpath)
-
-    return prediction_day, prediction_max, prediction_min
+        return prediction_day, prediction_max, prediction_min
+    
+    except NoSuchElementException as e:
+        print(f'Erro ao obter a previsão dos próximos 3 dias: {e}')
 
 def write_content(day_temperature, day_condition, predictions):
 
@@ -166,4 +188,4 @@ def main():
     driver.close()
 
 if __name__ == '__main__':
-    schedule_email(30)
+    schedule_email(5)
