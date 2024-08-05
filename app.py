@@ -13,6 +13,10 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import schedule
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 def iniciar_driver():
     try:
@@ -74,6 +78,7 @@ def find_city(wait, city):
 
     except TimeoutException as e:
         print(f'Erro ao encontrar a cidade: {e}')
+        return None
 
 def get_day_temperature(driver, wait, xpath):
     try:
@@ -82,6 +87,7 @@ def get_day_temperature(driver, wait, xpath):
     
     except TimeoutException as e:
         print(f'Erro ao obter a temperatura do dia: {e}')
+        return None
 
 def get_day_condition(driver, wait, xpath):
     try:
@@ -90,6 +96,7 @@ def get_day_condition(driver, wait, xpath):
 
     except TimeoutException as e:
         print(f'Erro ao ober as condições climáticas do dia: {e}')
+        return None
 
 def get_3_day_prediction(driver, day_xpath, max_xpath, min_xpath):
     try:
@@ -101,6 +108,7 @@ def get_3_day_prediction(driver, day_xpath, max_xpath, min_xpath):
     
     except NoSuchElementException as e:
         print(f'Erro ao obter a previsão dos próximos 3 dias: {e}')
+        return None, None, None
 
 def write_content(day_temperature, day_condition, predictions):
 
@@ -159,13 +167,17 @@ def main():
     # Configurações do servidor e credenciais
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
-    smtp_user = 'lpzampronio@gmail.com'
-    smtp_password = 'epyx hyjd wtlc yzbv' # senha de app do Google
+    smtp_user = os.getenv('SMTP_USER')
+    smtp_password = os.getenv('SMTP_PASSWORD') # senha de app do Google
 
     # Informações do e-mail
-    from_email = 'lpzampronio@gmail.com'
-    to_email = 'lpzamprogno@gmail.com'
+    from_email = os.getenv('FROM_EMAIL')
+    to_email = os.getenv('TO_EMAIL')
     subject = 'Previsão do tempo'
+
+    if not smtp_user or not smtp_password or not from_email or not to_email:
+        print("Erro: Verifique se todas as variáveis de ambiente estão definidas no arquivo .env")
+        return
 
     driver, wait = open_url(url)
     find_city(wait, city)
